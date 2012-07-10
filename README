@@ -1,0 +1,21 @@
+Scripts to help with Unix (probably Solaris) administration.
+
+s-dr.sh - backs up key system files for rudimentary DR
+
+s-ldom.sh - creates, clones, and destroys logical domains.
+
+s-zone.sh - creates, clones and destroys Solaris zones.
+
+un - unpacks archives of various types
+
+zfs/zfs_real_usage.sh - shows how much space datasets and snapshots really
+use
+
+zfs/zfs_remove_snap.sh - batch remove ZFS snapshots
+
+zfs/zfs_scrub.sh - wrapper to 'zpool scrub'
+
+zfs/zfs_send_stream.sh - recursively send ZFS datasets on machines to old to
+have 'zfs send -R'
+
+zfs/zfs_snapshot.sh - batch snapshotter
