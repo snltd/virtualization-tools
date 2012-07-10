@@ -1,0 +1,80 @@
+#!/bin/ksh
+
+typeset -l SFX 
+
+whence gtar >/dev/null && TAR="gtar" || TAR="tar"
+
+#-----------------------------------------------------------------------------
+# FUNCTIONS
+
+function die
+{
+	echo $*
+	exit 1
+}
+
+function unpack_file
+{
+	# check a file and unpack it if we can
+	# $1 is the file
+
+	[ -e "$1" ] || { print "ERROR: $1 does not exist"; return; }
+
+	[ -d "$1" ] && { print "ERROR: $1 is a directory"; return; }
+
+	SFX=${1##*.}
+
+	case $SFX in
+
+		"bz2")	ARC="bzip2 -dc \"$1\" | $TAR -xf -"
+				;;
+
+		"gz")	ARC="gzip -dc \"$1\" | $TAR -xf -"
+				;;
+
+		"tgz")	ARC="gzip -dc \"$1\" | $TAR -xf -"
+				;;
+
+		"z")	ARC="uncompress -c \"$1\"  | $TAR -xf -"
+				;;
+
+		"tar")	ARC="$TAR -xf - \"$1\""
+				;;
+		
+		"zip")	ARC="unzip -qq -o \"$1\""
+				;;
+
+		"jar")	ARC="jar -xf \"$1\""
+				;;
+
+		"rar")	ARC="unrar -y -inul e \"$1\""
+				;;
+
+		"xz")	ARC="xz -dc \"$1\" | $TAR -xf -"
+				;;
+
+	esac
+
+	if [[ -n $ARC ]]
+	then
+		print -n "unpacking $1: "
+		eval $ARC \
+			&& print "ok" \
+			|| print "FAILED"
+	else
+		print "don't know what to do with $1"
+	fi
+
+}
+
+#-----------------------------------------------------------------------------
+# SCRIPT STARTS HERE
+
+[ $# -eq 0 ] && { print "usage: $(basename $0) <file>"; exit 1; }
+
+for file in $*
+do
+	unpack_file "$file"
+done
+
+exit $?
