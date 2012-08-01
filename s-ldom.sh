@@ -488,15 +488,26 @@ then
 	if [[ -n $BOOT_SIZE ]]
 	then
 
-		# Does the boot disk description look sane?
+		# We're making a boot disk. Does the description look sane?
 
 		print $BOOT_SIZE | egrep -s "^[0-9]+G" \
 			|| die "invalid boot disk size [e.g. 20G]"
 	
 		LDM_BOOT="${ZFSROOT}/${LDM}-boot"
-	else
+	elif [[ -n $BOOT_DEVICE ]]
+	then
+		
+		# We're mapping a boot device
+
 		LDM_BOOT="/dev/dsk/$BOOT_DEVICE"
 		[[ -a $LDM_BOOT ]] || die "invalid boot device"
+	elif [[ $MODE == "clone" ]]
+	then
+		# We're cloning a snapshot.
+
+		LDM_BOOT="${ZFSROOT}/${LDM}-boot"
+	else
+		die "Don't know what to do for a boot device."
 	fi
 
 	cat<<-EODEF
@@ -534,6 +545,7 @@ then
 	if [[ $MODE == "clone" ]]
 	then
 		clone_zvol $SRC_ZFS $LDM_BOOT
+		LDM_BOOT_DEV=/dev/zvol/dsk/$LDM_BOOT
 	elif [[ -n $BOOT_SIZE ]]
 	then
 		create_zvol $BOOT_SIZE $LDM_BOOT 
