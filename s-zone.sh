@@ -99,6 +99,7 @@ db:FSLIST:/usr/local=local,/data=data
 iplanet:FSLIST:/opt=opt,/www=www,/usr/local=local
 mail:FSLIST:/usr/local=local,/var/log/exim=logs
 snltd:FSLIST:/config=config,/home=/export/home
+oracle:FSLIST:/u01=u01,/u02=u02,/usr/local=local,/opt=opt
 "
 
 # Files to copy from the global zone to the local zone. Not done for lx
