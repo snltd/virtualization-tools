@@ -1,6 +1,6 @@
-Scripts to help with Unix (probably Solaris) administration.
+Scripts to help with Unix (probably Solaris) administration. Documentation is in the wiki pages, but briefly:
 
-s-dr.sh - backs up key system files for rudimentary DR
+*    s-dr.sh - backs up key system files for rudimentary DR
 
 s-ldom.sh - creates, clones, and destroys logical domains.
 
