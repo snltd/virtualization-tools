@@ -1,6 +1,22 @@
 #!/bin/ksh
 
+#=============================================================================
+# 
+# un
+# --
+#
+# Simple wrapper to a bunch of archivers.
+#
+#
+# R Fisher 2005
+#
+#=============================================================================
+
+# Always lower-case the file suffix
+
 typeset -l SFX 
+
+# See if tar is called gtar
 
 whence gtar >/dev/null && TAR="gtar" || TAR="tar"
 
@@ -10,7 +26,7 @@ whence gtar >/dev/null && TAR="gtar" || TAR="tar"
 function die
 {
 	echo $*
-	exit 1
+	exit ${1:-2}
 }
 
 function unpack_file
@@ -18,9 +34,11 @@ function unpack_file
 	# check a file and unpack it if we can
 	# $1 is the file
 
-	[ -e "$1" ] || { print "ERROR: $1 does not exist"; return; }
-
-	[ -d "$1" ] && { print "ERROR: $1 is a directory"; return; }
+	if [[ ! -s "$1" ]] 
+	then
+		print "ERROR: '$1' does not exist or is not a file"
+		return 1
+	fi
 
 	SFX=${1##*.}
 
@@ -58,11 +76,9 @@ function unpack_file
 	if [[ -n $ARC ]]
 	then
 		print -n "unpacking $1: "
-		eval $ARC \
-			&& print "ok" \
-			|| print "FAILED"
+		eval $ARC && print "ok" || print "FAILED"
 	else
-		print "don't know what to do with $1"
+		print "ERROR: don't know what to do with '$1'"
 	fi
 
 }
@@ -70,11 +86,16 @@ function unpack_file
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
-[ $# -eq 0 ] && { print "usage: $(basename $0) <file>"; exit 1; }
+if [[ $# -eq 0 ]]
+then
+	print "usage: ${0##*/} <file>.."
+	exit 1
+fi
 
-for file in $*
+for file in "$@"
 do
 	unpack_file "$file"
 done
 
 exit $?
+
