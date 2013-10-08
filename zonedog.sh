@@ -2,14 +2,14 @@
 
 #=============================================================================
 #
-# bootdog.sh
+# zonedog.sh
 # ----------
 #
-# Sometimes when I boot my workstation, zones don't start. This is a simple
-# watchdog script which gets run from cron, and starts non-running zones.
-# Give it a list of zones to start on the command line. Zones are started in
-# whatever order they come out of 'zoneadm list', so no dependencies or
-# priorities are honoured.
+# Sometimes when I boot my workstation, zones don't start. This is a
+# simple watchdog script which gets run from cron, and starts
+# non-running zones.  Give it a list of zones to start on the command
+# line. Zones are started in whatever order they come out of 'zoneadm
+# list', so no dependencies or priorities are honoured.
 #
 # Run it in a global zone only, as a user with zone admin privileges. It
 # doesn't check to see that either of those things are true.
@@ -20,30 +20,27 @@
 #
 # v1.0. Please log all changes below.
 #
+# v1.1. Removed redundant code.
+#
 # R Fisher 04/2013
 #
 #=============================================================================
 
 PATH=/usr/bin:/usr/sbin
+	# Always set your PATH
 
-ZONELIST="tap-ws tap-dns"
-
-MY_VER="1.0"
-
-#-----------------------------------------------------------------------------
-# FUNCTIONS
-
-die()
-{
-	# Exit function
-
-	[[ -n $1 ]] && print -u2 "ERROR: $1" || print "FAILED"
-
-	exit ${2:-1}
-}
+MY_VER="1.1"
 
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
+
+# Only runs in the global.
+
+if [[ $(zonename 2>/dev/null) != "global" ]]
+then
+	print "ERROR: script must be run in global zone."
+	exit 3
+fi
 
 while getopts "Vhq" option
 do
@@ -54,7 +51,17 @@ do
 			exec 2>&-;
 			;;
 
-		h)	print -u2 "usage: ${0##*/} [-Vhq] <zone>..."
+		h)	cat <<-EOUSAGE
+
+usage: ${0##*/} [-Vhq] zone...
+
+where:
+
+      -q :     be quiet
+      -V :     print version information
+      -h :     print usage information
+
+EOUSAGE
 			exit 2
 			;;
 
@@ -67,11 +74,15 @@ done
 
 # Make sure we have at least one zone to look at
 			
-[[ $# == 0 ]] && die "no zones given"
+if [[ $# == 0 ]] 
+then
+	print -u2 "usage: ${0##*/} [-Vhq] zone..."
+	exit 1
+fi
 
-# Get a list of all the zones on this host, and their state. For each one
-# that is not running, look to see if it was among the arguments, and if it
-# was, boot it up.
+# Get a list of all the zones on this host, and their state. For each
+# one that is not running, look to see if it was among the arguments,
+# and if it was, boot it up.
 
 zoneadm list -pc | cut -d: -f2,3 | tr : \  | while read zone state
 do

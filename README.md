@@ -1,19 +1,38 @@
-Scripts to help with Unix (probably Solaris) administration. Documentation
-is in the wiki pages, but briefly:
+# Solaris Virtualization Tools
 
-In the top-level directory:
+Scripts to help with administration of a virtualized Solaris setup.
 
- * `s-dr.sh`: backs up key system files for rudimentary DR
- * `s-ldom.sh`: creates, clones, and destroys logical domains.
- * `s-zone.sh`: creates, clones and destroys Solaris zones.
- * `un`: unpacks archives of various types
- * `zonedog.sh`: a watchdog that ensures vital zones are running
+## s-zone.sh
 
-In the zfs/ subdirectory:
+This script creates, clones and destroys zones. It was written to
+work with Solaris 10, but you can use it with most other SunOS
+systems which handle zones. 
 
- * `zfs_real_usage.sh`: shows how much space datasets and snapshots really use
- * `zfs_remove_snap.sh`: batch remove ZFS snapshots
- * `zfs_scrub.sh`: wrapper to 'zpool scrub'
- * `zfs_send_stream.sh`: recursively send ZFS datasets on machines too old to
-  have `zfs send -R`.
- * `zfs_snapshot.sh`: batch snapshotter
+It's grown and grown from being a small script used to make simple
+zones. Internally, it's not very nice, but it's served me very well
+in a number of production environments.
+
+[Documentation is
+here](https://github.com/snltd/admin-scripts/wiki/s-zone.sh).
+
+## s-ldom.sh 
+
+Creates, clones, and destroys logical domains on Sun T-series
+systems. Works with Solaris 10 and Solaris 11.
+
+[Documentation is
+here](https://github.com/snltd/admin-scripts/wiki/s-ldom.sh).
+
+## s-dr.sh
+
+A simple script which backs up key system files for rudimentary DR.
+It works hand-in-hand with `s-zone.sh` to allow you to easily
+rebuild lost zones.
+
+[It is documented here in the
+wiki](https://github.com/snltd/admin-scripts/wiki/s-dr.sh).
+
+## zonedog.sh
+
+A watchdog which ensures vital zones are running. Run it from
+`cron`.
