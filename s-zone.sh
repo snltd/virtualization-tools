@@ -1722,13 +1722,27 @@ then
 
 		get_netmask $addr
 
-		check_ip_addr $addr \
-			|| die "Problem with network interfaces."
+		check_ip_addr $addr || die "Problem with network interfaces."
 
 		print "    getting interface $phys"
 
-		OE=$(zonecfg -z $SRC_ZONE info net physical=$phys \
+		OE=$(zonecfg -z $SRC_ZONE info net physical=$phys 2>/dev/null \
 		| sed -n -e '/address/s/^.*: //;s/\./\\\./gp')
+
+		if [[ -z $OE ]]
+		then
+			print "     can't find 'net' resource: trying 'anet'"
+			OE=$(zonecfg -z $SRC_ZONE info anet physical=$phys 2>/dev/null \
+			| sed -n -e '/address/s/^.*: //;s/\./\\\./gp')
+		fi
+
+		if [[ -z $OE ]]
+		then
+			if=$(zonecfg -z $SRC_ZONE info | sed -n '/linkname/s/^.* //p')
+			die "interface $phys not in source zone. Try $if."
+		fi
+
+		print "    matched interface $phys"
 
 		SEDLINE="${SEDLINE} -e 's/$OE/$addr/'"
 	done
