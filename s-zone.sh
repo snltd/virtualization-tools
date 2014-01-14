@@ -7,7 +7,7 @@
 #
 # A script to help create, destroy, recreate, and manage zones Solaris
 # servers. Usage is fairly complicated. Run with -h to get options.
-# 
+#
 # This script was originally written in the days before ZFS root, when it
 # was wise to put zone roots on UFS. To get some ZFS benefit, the script
 # would create non-core-FS filesystems under /zonedata/zone-name, which
@@ -32,7 +32,7 @@
 # v3.0	Code tidy. Readied for public consumption. Much improvement of
 #       cloning. Works properly on S10/SXCE/S11 Express. New "all" and
 #       "list" commands.
-# 
+#
 #=============================================================================
 
 #-----------------------------------------------------------------------------
@@ -151,7 +151,7 @@ function die
 	exit ${2:-1}
 }
 
-function usage
+usage()
 {
 	# print usage
 
@@ -160,27 +160,27 @@ function usage
 	Create, destroy, clone and recreate Solaris zones.
 
 	usage:
-	  s-zone.sh create <-i|-e addr> [-F fslist] [-c class] [-wFp] <zone>
+	  ${0##*/} create <-i|-e addr> [-F fslist] [-c class] [-wFp] <zone>
 
-	  s-zone.sh create <-b brand> <-I image> [-t type] <-i|-e addr>
+	  ${0##*/} create <-b brand> <-I image> [-t type] <-i|-e addr>
 	            [-V nic=vnic] [-Ffslist] [-c class] [-Fp] <zone>
 
-	  s-zone.sh recreate [-wsF] [ -d directory] <zone>
+	  ${0##*/} recreate [-wsF] [ -d directory] <zone>
 
-	  s-zone.sh clone [-Ff] -i<addr> -s<zone> <zone> 
+	  ${0##*/} clone [-Ff] -i<addr> -s<zone> <zone>
 
-	  s-zone.sh remove|destroy [-f] [-k|z] <zone> zone ... zone
+	  ${0##*/} remove|destroy [-f] [-k|z] <zone> zone ... zone
 
-	  s-zone.sh all <halt|reboot|shutdown|boot>
+	  ${0##*/} all <halt|reboot|shutdown|boot|run>
 
-	  s-zone.sh list <classes|files>
+	  ${0##*/} list <classes|files>
 
-	  s-zone.sh -V
+	  ${0##*/} -V
 
 	CREATE MODE:
 	  -w, --whole        create a whole-root zone
 	  -v, --vnic         create VNIC on physical NIC
-	  -i, --iflist       shared interface list 
+	  -i, --iflist       shared interface list
 	                     if1=addr1;route,if2=addr2;route,...,ifn=addrn;route
 	                     route is optional
 	  -e, --exclusive    exclusive interface list
@@ -197,7 +197,7 @@ do
 done)
 	  -F, --force        if zone exists, remove it and re-create
 	  -p, --prefix       prefix the zone name with "$(uname -n)z-"
-	  -R, --rset         parent ZFS dataset of the zone root. If not 
+	  -R, --rset         parent ZFS dataset of the zone root. If not
 	                     supplied uses the root pool
 	  -D, --dset         ZFS dataset under which to create additional
 	                     loopback filesystems. If not supplied, uses the
@@ -231,7 +231,7 @@ done)
 	                     are kept, but the zone's O/S files are removed
 	                     (cannot be used in conjunction with -n)
 	  -n, --nofs         don't destroy any zone filesystems or remove any
-	                     files which are not removed by the 'zoneadm 
+	                     files which are not removed by the 'zoneadm
 	                     uninstall' command
 	                     (cannot be used in conjunction with -a)
 
@@ -279,7 +279,7 @@ function check_zpool
 
 	typeset pool
 
-	if [[ -n $2 ]] 
+	if [[ -n $2 ]]
 	then
 		pool=$(zfs list -H -o name $2 2>/dev/null | sed 's|/.*$||')
 		[[ -z $pool ]] && pool="err"
@@ -322,7 +322,7 @@ function check_ip_addr
 function get_netmask
 {
 	# Get the netmask the zone will use. Query /etc/netmasks first
-	
+
 	# $1 is the physical interface
 
 	if [[ -f /etc/netmasks ]]
@@ -332,7 +332,7 @@ function get_netmask
 
 	if [[ -n $mask ]]
 	then
-		NETMASK=$mask 
+		NETMASK=$mask
 		print "  netmask is ${NETMASK}."
 	else
 		NETMASK="255.255.255.0"
@@ -579,7 +579,7 @@ function install_zone
 
 			for ns in $nameservers
 			do
-          		print "			<value_node value=\"$ns\"/>" 
+          		print "			<value_node value=\"$ns\"/>"
 			done >>$SCI
 
         	print "</net_address_list></property>" >>$SCI
@@ -643,7 +643,7 @@ function install_zone
 		&& print "  zone installed" \
 		|| die "failed to install zone"
 
-	# Drop in a sysidcfg file 
+	# Drop in a sysidcfg file
 
 	if [[ -z $S11 ]]
 	then
@@ -676,7 +676,7 @@ function make_zfs
 	# Make a ZFS filesystem, and set its mountpoint.  Do the create and set
 	# mountpoint separately. This corrects any existing, but unmounted or
 	# wrongly mounted, filesystems
-	
+
 	# $1 is the name of the filesystem
 	# $2 is the mountpoint
 
@@ -748,7 +748,7 @@ function customize_zone_lx
 	# $2 is the zone root
 	# $3 is the root of the filesystem to copy files from
 	# $FILELIST may be defined before calling
-	
+
 	:
 }
 
@@ -772,7 +772,7 @@ function customize_zone
 		cfile="${MINIROOT}/$file"
 		print -n "    $cfile "
 
-		if [[ -f $cfile ]] 
+		if [[ -f $cfile ]]
 		then
 			cp -p $cfile ${ZROOT}/root/$file \
 			&& print "copied" || print "copy failed"
@@ -964,9 +964,9 @@ then
 	shift $(($OPTIND - 1))
 
 	[[ $# == 1  ]] || die "no zone name supplied."
-	
+
 	[[ -n $PREFIX ]] && zone="${PREFIX}z-$1" || zone=$1
-	
+
 	# Basic checks. Is it worth carrying on? Branded zones need an install
 	# image
 
@@ -995,7 +995,7 @@ then
 	fi
 
 	# Check the zone root exists
-	
+
 	[[ -d $ZONEROOT ]] || die "Zone root does not exist. [${ZONEROOT}]"
 
 	# If we've been given a -f or -c option, we're using the old-skool
@@ -1041,7 +1041,7 @@ then
 
 	# Does the zone already exist?. If it does, remove it if -F has been
 	# supplied. If not, stop
-	
+
 	rm_zone_if_exists $zone
 
 	# Functions to install and customize zones. Can be overriden per-brand
@@ -1067,7 +1067,7 @@ then
 				|| die "System does not support lx brand."
 
 			CREATE_FLAGS="-t SUNWlx"
-			
+
 			# For linux zones we can select an install type, one of "core",
 			# "server", "desktop", "developer" or "all". The user can choose
 			# it with the -t option, but if they haven't, fall back to
@@ -1102,11 +1102,11 @@ then
 
 			pkginfo SUNWs9brandr SUNWs9brandu >/dev/null 2>&1 \
 				|| die "System does not support solaris9 brand."
-		
+
 			CREATE_FLAGS="-t SUNWsolaris9"
 		elif [[ $BRAND == "s10" ]]
 		then
-			
+
 			# Does the system support solaris10?
 
 			if [[ -f /bin/pkg ]]
@@ -1125,14 +1125,14 @@ then
 				[[ -n $SIFLIST ]] \
 					&& die "solaris10 branded zones must use exclusive IP"
 
-				CREATE_FLAGS="-t SYSsolaris10" 
+				CREATE_FLAGS="-t SYSsolaris10"
 				unset S11
 			else
 				[[ -n $EIFLIST ]] \
 					&& die "solaris10 branded zones must use shared IP"
 				CREATE_FLAGS="-t SUNWsolaris10"
 			fi
-			
+
 		else
 			 die "Unsupported brand. [${BRAND}]"
 		fi
@@ -1154,7 +1154,7 @@ then
 
 		if dladm help 2>&1 | egrep -s "create-vnic"
 		then
-			
+
 			if dladm show-link $vnic >/dev/null 2>&1
 			then
 				print "already exists"
@@ -1306,7 +1306,7 @@ then
 
 		print \
 		"  zone root is on UFS filesystem $(df $ZONEROOT | sed 's/ .*$//')"
-		
+
 		mkdir -p -m 0700 $ZROOT \
 			|| die "Could not create zone root.  [$ZROOT]" 4
 
@@ -1322,7 +1322,7 @@ then
 			make_zfs $RZFS/ROOT $ZROOT
 
 			zfs set compression=on $RZFS
-	
+
 			[[ -n $ZOS_QUOTA ]] \
 				&& zfs set quota=$ZOS_QUOTA $RZFS
 
@@ -1385,7 +1385,7 @@ then
 					mkdir -p $spec
 					print "(UFS)"
 				else
-					DZFS=${DPOOL}/${zone}/${dir##*/} 
+					DZFS=${DPOOL}/${zone}/${dir##*/}
 					print "(ZFS - $DZFS)"
 
 					make_zfs $DZFS $spec \
@@ -1400,7 +1400,7 @@ then
 			print "    mapping $spec to $dir"
 
 			cat <<-EOFS >>$TMPFILE
-			add fs 
+			add fs
 			set dir=$dir
 			set special=$spec
 			set type=lofs
@@ -1444,7 +1444,7 @@ then
 	# Boot the zone
 
 	zone_boot $zone || die "failed to boot zone"
-	
+
 	# And copy stuff in from the global to make it useful, if we've been
 	# asked to
 
@@ -1454,7 +1454,7 @@ then
 
 	if [[ -n $INST_IMG ]]
 	then
-		print "Rebooting..." 
+		print "Rebooting..."
 		zoneadm -z $zone reboot
 	fi
 
@@ -1524,7 +1524,7 @@ then
 		if [[ -n $REMOVE_ALL ]]
 		then
 			# Get a list of ZFS filesystems which we think belong to this
-			# zone. 
+			# zone.
 
 			zonecfg -z $zone info fs | sed -n '/special: /s/^.*: //p' |
 			while read fs
@@ -1574,7 +1574,7 @@ then
 
 		# Now do the removal, assuming we have the all-clear
 
-		if [[ x$remove == "xy" || -n $FORCE ]] 
+		if [[ x$remove == "xy" || -n $FORCE ]]
 		then
 			# Remove the zone
 
@@ -1586,7 +1586,7 @@ then
 			done
 
 		fi
-		
+
 	done
 
 #-- ZONE CLONING -------------------------------------------------------------
@@ -1764,7 +1764,7 @@ then
 
 	install_zone $ZNAME $ZROOT
 	zone_boot $ZNAME
-	
+
 	# reboot the source zone if we halted it
 
 	[[ -n $RB_Z ]] && zone_boot $SRC_ZONE
@@ -1814,7 +1814,7 @@ then
 	[[ -d $DR_DIR ]] || die "DR directory does not exist. [$1]"
 
 	# Work out where we think the DR data for the given zone should be
-	
+
 	Z_CF_DIR="${DR_DIR}/$(uname -n)/$ZNAME"
 
 	[[ -d $Z_CF_DIR ]] || die "No DR data for $ZNAME. [$Z_CF_DIR]"
@@ -1840,7 +1840,7 @@ then
 		  but this script doesn't yet have the ability to recreate the
 		  networking configuration. Once the zone is installed, you have to
 		  connect to the zone's console with
-		
+
 		    # zlogin -C $ZNAME
 
 		  and manually enter the name and IP address.
@@ -1848,7 +1848,7 @@ then
 		=====================================================================
 
 		EOWARN
-	
+
 	rm_zone_if_exists $ZNAME
 
 	# Get the zone root, then make it, with the correct permissions
@@ -1900,7 +1900,7 @@ then
 
 	sed -n "/set special/s/^.*=//p" $Z_CF | while read special
 	do
-		
+
 		if [[ ! -d $special ]]
 		then
 			MK_FS=true
@@ -1924,7 +1924,7 @@ then
 			line=${line#set }
 			key=${line%=*}
 			eval $(print $line)
-			
+
 			[[ $key == type ]] \
 				&& make_zfs_special ${ztop}/${special##*/} $special
 
@@ -1956,7 +1956,7 @@ then
 	zone_wait $ZNAME
 
 	print "running restore script"
-	$DR_SCR restore -F -d ${Z_CF_DIR%/$(uname -n)/*} $ZNAME 
+	$DR_SCR restore -F -d ${Z_CF_DIR%/$(uname -n)/*} $ZNAME
 
 #-- ALL ZONE OPERATIONS ------------------------------------------------------
 
@@ -2016,14 +2016,35 @@ then
 
 		fi
 
-	
+
+    elif [[ $1 == "run" ]]
+    then
+        shift
+
+        # Run whatever's left in all zones
+
+        zl=$(zoneadm list | sed 1d)
+
+		if [[ -z $zl ]]
+		then
+			print "no running zones"
+		else
+
+			for z in $zl
+			do
+				print "running '$*' in $z"
+				zlogin $z $*
+			done
+
+        fi
+
 	fi
 
 #-- INFORMATION --------------------------------------------------------------
 
 elif [[ x$MODE == xlist ]]
 then
-	
+
 	if [[ $1 == "files" ]]
 	then
 		print "\nThe following files will be copied from the global zone:\n"
