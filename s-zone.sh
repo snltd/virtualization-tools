@@ -216,6 +216,7 @@ done)
 	  -F, --force        force removal of existing zone
 	  -f, --fs           create new /zonedata filesystems for target zone
 	  -i, --iflist       shared interface list
+	  -e, --exclusive    exclusive interface list
 	  -s, --source       source zone
 
 	RECREATE MODE:
@@ -420,10 +421,12 @@ function zone_boot
 	# $1 is the zone
 
 	print "\nBooting $1"
+    print "#----zone_boot()" >>$ERRLOG
 
-	zoneadm -z $1 boot 2>/dev/null \
+	zoneadm -z $1 boot >>$ERRLOG 2>&1\
 		&& print "  boot process begun" \
-		|| print "  boot failed"
+        || die "boot failed"
+
 }
 
 function configure_zone
@@ -442,7 +445,8 @@ function configure_zone
 		mv $2 "${ARC_DIR}/${1}.cfg"
 		print $INV_CMD >"${ARC_DIR}/${1}.cmd"
 	else
-		cp $TMPFILE $ERRLOG
+        print "#---- zone config file follows" >>$ERRLOG
+		cat $TMPFILE >>$ERRLOG
 		die "Exiting."
 	fi
 }
@@ -453,6 +457,7 @@ function install_zone_lx
 	# $1 is the zone
 
 	print -n "\nInstalling zone: "
+    print "#----install_zone_lx()" >>$ERRLOG
 
 	zoneadm -z $1 install -d $INST_IMG $LX_TYPE >/dev/null 2>$ERRLOG \
 		&& print "ok" \
@@ -536,8 +541,8 @@ function install_zone
       		<property_group type="application" name="install_ipv4_interface">
         		<propval type="astring" name="address_type" value="static"/>
         		<propval type="net_address_v4" name="static_address"
-				value="$S11_IP_ADDR/$S11_IP_NETMASK"/>
-        		<propval type="astring" name="name" value="$S11_IP_PHYS/v4"/>
+				value="${S11_IP_ADDR}/${S11_IP_NETMASK}"/>
+        		<propval type="astring" name="name" value="${S11_IP_PHYS}/v4"/>
       		</property_group>
     		</instance>
   		</service>
@@ -1143,7 +1148,8 @@ then
 	print "\nCreating zone '${zone}'"
 	tput sgr0
 
-	# If we have to make a VNIC, do that now
+	# If we have to make a VNIC, do that now. Solaris 10 can't do this,
+    # so fail gracefully.
 
 	if [[ -n $VNIC ]]
 	then
@@ -1159,9 +1165,7 @@ then
 			then
 				print "already exists"
 			else
-
-				dladm create-vnic -l $pnic $vnic \
-					&& print "ok" || die "failed"
+				dladm create-vnic -l $pnic $vnic && print "ok" || die "failed"
 			fi
 
 		else
@@ -1182,7 +1186,7 @@ then
 		set autoboot=true
 	EOZ
 
-	# Define ip-type if we're using exclusive interfaces
+	# Solaris 10 assumes shared IP, 11 assumes exclusive. So, if we're
 
 	if [[ -n $EIFLIST ]]
 	then
@@ -1224,13 +1228,14 @@ then
 		# If we're doing shared interfaces, check the requested interface
 		# exists on the system and is plumbed at boot. If we're using
 		# exclusive interfaces, the interface *CAN'T* be used by the global
-		# zone
+		# zone unless it's a link
 
 		if [[ -n $SIFLIST ]]
 		then
 			ifconfig $phys >/dev/null 2>&1 || { print \
 			"    interface $phys is not configured. Skipping."; continue; }
-		else
+        else
+
 			ifconfig $phys >/dev/null 2>&1 && { print \
 			"    interface $phys is configured in global zone. Skipping."
 			continue; }
@@ -1443,7 +1448,7 @@ then
 
 	# Boot the zone
 
-	zone_boot $zone || die "failed to boot zone"
+	zone_boot $zone
 
 	# And copy stuff in from the global to make it useful, if we've been
 	# asked to
