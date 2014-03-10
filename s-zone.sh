@@ -33,12 +33,14 @@
 #       cloning. Works properly on S10/SXCE/S11 Express. New "all" and
 #       "list" commands.
 #
+# v3.1  -a option to create anet networked zones on Solaris 11
+#
 #=============================================================================
 
 #-----------------------------------------------------------------------------
 # VARIABLES
 
-MY_VER="3.0"
+MY_VER="3.1"
 	# Version of script. KEEP UPDATED!
 
 PATH=/usr/bin:/usr/sbin
@@ -160,14 +162,14 @@ usage()
 	Create, destroy, clone and recreate Solaris zones.
 
 	usage:
-	  ${0##*/} create <-i|-e addr> [-F fslist] [-c class] [-wFp] <zone>
+	  ${0##*/} create <-i|-e|-a addr> [-F fslist] [-c class] [-wFp] <zone>
 
 	  ${0##*/} create <-b brand> <-I image> [-t type] <-i|-e addr>
 	            [-V nic=vnic] [-Ffslist] [-c class] [-Fp] <zone>
 
 	  ${0##*/} recreate [-wsF] [ -d directory] <zone>
 
-	  ${0##*/} clone [-Ff] -i<addr> -s<zone> <zone>
+	  ${0##*/} clone [-Ff] <-i|-e addr> -s<zone> <zone>
 
 	  ${0##*/} remove|destroy [-f] [-k|z] <zone> zone ... zone
 
@@ -184,6 +186,8 @@ usage()
 	                     if1=addr1;route,if2=addr2;route,...,ifn=addrn;route
 	                     route is optional
 	  -e, --exclusive    exclusive interface list
+	                     if1=addr1,if2=addr2,...,ifn=addrn
+	  -a, --anet         automatic interface list (Solaris 11 only)
 	                     if1=addr1,if2=addr2,...,ifn=addrn
 	  -f, --fslist       filesystem list
 	                     dir1=special1,dir2=special2...
@@ -914,9 +918,12 @@ if [[ x$MODE == xcreate ]]
 then
 
 	while getopts \
-		"b:(brand)c:(class)d:(default)v:(vnic)e:(exclusive)F(force)f:(fslist)i:(iflist)I:(image)n(nocopy)pt:(type)wzR:(rpool)D:(dpool)" option 2>/dev/null
+        "a:(anet)b:(brand)c:(class)d:(default)v:(vnic)e:(exclusive)F(force)f:(fslist)i:(iflist)I:(image)n(nocopy)pt:(type)wzR:(rpool)D:(dpool)" option 2>/dev/null
 	do
 		case $option in
+
+            a)  AIFLIST=$OPTARG
+                ;;
 
 			b)	BRAND=$OPTARG
 				;;
@@ -984,10 +991,22 @@ then
 	dispadmin -d 2>/dev/null | egrep -s FSS \
 		|| print "WARNING: set default scheduler to FSS"
 
-	# Either exclusive or shared interfaces - not both
+    [[ -n $AIFLIST && ! $S11 ]] \
+        && die "automatic interfaces are only supported in Solaris 11"
 
-	[[ -n $SIFLIST && -n $EIFLIST ]] && die "-i and -e are exclusive"
-	[[ -n $SIFLIST ]] && IFLIST="$SIFLIST" || IFLIST="$EIFLIST"
+	# Either exclusive, shared, or automatic interfaces - not more than
+    # one
+
+    ifcount=0
+
+    for iflist in $AIFLIST $EIFLIST $SIFLIST
+    do
+        ((ifcount = $ifcount + 1))
+        IFLIST=$iflist
+    done
+
+    (( $ifcount > 1 )) && die "-a, -i and -e are exclusive"
+
 	[[ -z $IFLIST ]] && die "no network interfaces defined"
 
 	# To use shared IP on Solaris 11 you need to specify an alternate
@@ -1188,7 +1207,7 @@ then
 
 	# Solaris 10 assumes shared IP, 11 assumes exclusive. So, if we're
 
-	if [[ -n $EIFLIST ]]
+	if [[ -n $EIFLIST || -n $AIFLIST ]]
 	then
 		print "set ip-type=exclusive" >>$TMPFILE
 	elif [[ -n $S11 ]]
@@ -1209,7 +1228,7 @@ then
 
 	print $IFLIST | tr , "\n" | while read if
 	do
-		# Before the = is the NIC, after the = is the address. The address
+	# Before the = is the NIC, after the = is the address. The address
 		# may have a ;route attached
 
 		[[ $if != "*;" ]] && if="${if};"
@@ -1234,7 +1253,8 @@ then
 		then
 			ifconfig $phys >/dev/null 2>&1 || { print \
 			"    interface $phys is not configured. Skipping."; continue; }
-        else
+        elif [[ -n $EIFLIST ]]
+        then
 
 			ifconfig $phys >/dev/null 2>&1 && { print \
 			"    interface $phys is configured in global zone. Skipping."
@@ -1251,34 +1271,48 @@ then
 
 		# Put the network config in the temporary zone config file
 
-		cat <<-EONET >>$TMPFILE
-		add net
-		    set physical=$phys
-		EONET
 
-		# For a shared interface. The IP address goes in the zone config.
-		# For an exclusive interface, the IP address goes in the sysidcfg
-		# file (assuming we're not on Solaris 11)
+        if [[ -n $AIFLIST ]]
+        then
 
-		if [[ -n $SIFLIST ]]
-		then
-			print "    set address=$addr" >>$TMPFILE
-		elif [[ -z $S11 ]]
-		then
+            cat <<-EONET >>$TMPFILE
+            add anet
+                set linkname=$phys
+                set lower-link=auto
+			EONET
 
-			# This SYSIDBLOCK will override the one built into the
-			# install_zone() function
+        else
 
-			SYSIDBLOCK="$SYSIDBLOCK
-			network_interface=$phys {
-			  hostname=$zone
-			  ip_address=$addr
-			  netmask=$NETMASK
-			  protocol_ipv6=no
-			  default_route=$defrt
-			}
-			"
-		fi
+            cat <<-EONET >>$TMPFILE
+            add net
+                set physical=$phys
+			EONET
+
+            # For a shared interface. The IP address goes in the zone config.
+            # For an exclusive interface, the IP address goes in the sysidcfg
+            # file (assuming we're not on Solaris 11)
+
+            if [[ -n $SIFLIST ]]
+            then
+                print "    set address=$addr" >>$TMPFILE
+            elif [[ -z $S11 ]]
+            then
+
+                # This SYSIDBLOCK will override the one built into the
+                # install_zone() function
+
+                SYSIDBLOCK="$SYSIDBLOCK
+                network_interface=$phys {
+                  hostname=$zone
+                  ip_address=$addr
+                  netmask=$NETMASK
+                  protocol_ipv6=no
+                  default_route=$defrt
+                }
+                "
+            fi
+
+        fi
 
 		# Close off this interface section
 
