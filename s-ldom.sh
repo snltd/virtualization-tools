@@ -74,8 +74,11 @@ usage()
 	I_AM=${0##*/}
 	cat<<-EOUSAGE
 
-	$I_AM create|clone [-v cpus] [-m size] [-M maus] [-e var,var] [-t]
-	     [-NC] <-B size|-D device> [-s snapshot] -i NIC_list domain
+	$I_AM create -v cpus -m size -M maus [-e var,var] [-NCt]
+          <-B size|-D device> -i NIC_list domain
+
+	$I_AM create -v cpus -m size -M maus [-e var,var] [-NCt]
+	     -s snapshot -i NIC_list domain
 
 	$I_AM destroy [-Fa]
 
@@ -175,7 +178,7 @@ create_ldom_disk()
 	# $1 is the disk path
 	# $2 is the disk name
 	# $3 is the LDM
-	
+
 	print -n "  creating VDS device '${2}': "
 
 	if ldm ls-bindings -p | egrep -s "|vol=${2}|"
@@ -184,7 +187,7 @@ create_ldom_disk()
 	else
 		ldm add-vdsdev $1 ${2}@$VDS && print "ok" || die
 	fi
-	
+
 	print -n "  mapping disk to ${VDS}: "
 	ldm add-vdisk $2 ${2}@$VDS $3 && print "ok" || die
 
@@ -234,7 +237,7 @@ bind_ldom()
 {
 	# Bind the domain and start it
 	# $1 is the LDM
-	
+
 	print -n "\nbinding domain: "
 	ldm bind-domain $1 && print "ok" || die
 
@@ -259,7 +262,7 @@ bind_ldom()
 store_ldom_config()
 {
 	# Write the LDOM configuration
-	
+
 	[[ -n $NO_SP_WRITE ]] && return
 
 	if ldm ls-spconfig | egrep -s "^$SPCONFIG"
@@ -267,7 +270,7 @@ store_ldom_config()
 		print -n "\nClearing old spconfig '$SPCONFIG': "
 		ldm rm-spconfig $SPCONFIG
 	fi
-		
+
 	print -n "\nWriting spconfig '$SPCONFIG': "
 	ldm add-spconfig $SPCONFIG && print "ok" || die
 }
@@ -293,7 +296,7 @@ get_free_resources()
 	_FREE_VCPUS=$(ldm ls-devices -p | grep -c "|pid=")
 	_FREE_MAUS=$(ldm ls-devices -p | grep -c "|id=")
 	_FREE_MEM=$(ldm ls-devices -p memory | sed -n '/size=/s/^.*size=//p')
-	
+
 	if [[ -z $_FREE_MEM ]]
 	then
 		_FREE_MEM=0
@@ -340,7 +343,7 @@ then
 	do
 
 		case $option in
-			
+
 			B)	BOOT_SIZE=$OPTARG
 				;;
 
@@ -411,14 +414,14 @@ then
 	fi
 
 	# If we're not assigning a disk device, check for ZFS
-	
+
 	if [[ -z $BOOT_DEVICE ]]
 	then
 		whence zpool >/dev/null 2>&1 || die "system does not support ZFS."
 
 		zfs list $ZFSROOT >/dev/null 2>&1 \
 			|| die "ZFS dataset '$ZFSROOT' does not exist."
-	
+
 	fi
 
 	# Does the domain exist already?
@@ -448,7 +451,7 @@ then
 
 	if [[ $MODE == "clone" ]]
 	then
-		
+
 		if [[ -z $SRC_ZFS ]]
 		then
 			die "clone mode requires -s option."
@@ -492,11 +495,11 @@ then
 
 		print $BOOT_SIZE | egrep -s "^[0-9]+G" \
 			|| die "invalid boot disk size [e.g. 20G]"
-	
+
 		LDM_BOOT="${ZFSROOT}/${LDM}-boot"
 	elif [[ -n $BOOT_DEVICE ]]
 	then
-		
+
 		# We're mapping a boot device
 
 		LDM_BOOT="/dev/dsk/$BOOT_DEVICE"
@@ -533,7 +536,7 @@ then
 	fi
 
 	print
-	
+
 	create_ldom_hardware $VCPUS $MAUS $MEMORY $LDM
 
 	for nic in $NICDAT
@@ -548,7 +551,7 @@ then
 		LDM_BOOT_DEV=/dev/zvol/dsk/$LDM_BOOT
 	elif [[ -n $BOOT_SIZE ]]
 	then
-		create_zvol $BOOT_SIZE $LDM_BOOT 
+		create_zvol $BOOT_SIZE $LDM_BOOT
 		LDM_BOOT_DEV=/dev/zvol/dsk/$LDM_BOOT
 	else
 		LDM_BOOT_DEV=$LDM_BOOT
@@ -570,14 +573,14 @@ then
 	do
 
 		case $option in
-			
+
 			a)	ALL_DISKS=1
 				;;
 
 			F)	FORCE=1
 				;;
 		esac
-	
+
 	done
 
 	shift $(($OPTIND - 1))
@@ -587,7 +590,7 @@ then
 	domain_exists $LDM || die "domain '$LDM' does not exist."
 
 	# We need to get the VDS devices that belong to this domain
-	
+
 	VDSS=$(ldm ls-bindings -p $LDM | sed -n \
 	'/VDISK/s/^.*|name=\([^|]*\).*$/\1/p')
 
@@ -598,7 +601,7 @@ then
 
 	if [[ -n $ALL_DISKS ]]
 	then
-		
+
 		for vds in $VDSS
 		do
 			ZFS_RM_LIST=" $ZFS_RM_LIST $(ldm ls-bindings -p primary \
@@ -647,7 +650,7 @@ then
 	if [[ -n $ZFS_RM_LIST ]]
 	then
 		print "\ndestroying ZFS datasets"
-		
+
 		for fs in $ZFS_RM_LIST
 		do
 			print -n "  ${fs}: "
@@ -698,7 +701,7 @@ then
 
   The control domain is configured. Note that no virtual switches have been
   created - this script creates them as they are required by new domains.
-	
+
   To complete configuration, reboot the server with 'init 6'.
 
 ==============================================================================
