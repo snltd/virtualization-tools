@@ -97,7 +97,7 @@ plain:FSLIST:/usr/local=local
 apache:FSLIST:/usr/local=local,/www=www,/var/apache/logs=logs
 appserv:FSLIST:/usr/local=local,/www=www,/var/apache/logs=logs,/data=data
 dns:FSLIST:/usr/local=local,/var/log/named=logs,/var/named=named
-db:FSLIST:/usr/local=local,/data=data
+db:FSLIST:/usr/local=local,/data=data,/home=/export/home,/config=config
 iplanet:FSLIST:/opt=opt,/www=www,/usr/local=local
 mail:FSLIST:/usr/local=local,/var/log/exim=logs
 snltd:FSLIST:/config=config,/home=/export/home
@@ -165,7 +165,7 @@ usage()
 	  ${0##*/} create <-i|-e|-a addr> [-F fslist] [-c class] [-wFp] <zone>
 
 	  ${0##*/} create <-b brand> <-I image> [-t type] <-i|-e addr>
-	            [-V nic=vnic] [-Ffslist] [-c class] [-Fp] <zone>
+	            [-v nic=vnic] [-Ffslist] [-c class] [-Fp] <zone>
 
 	  ${0##*/} recreate [-wsF] [ -d directory] <zone>
 
@@ -181,7 +181,7 @@ usage()
 
 	CREATE MODE:
 	  -w, --whole        create a whole-root zone
-	  -v, --vnic         create VNIC on physical NIC
+	  -v, --vnic         create VNIC on physical NIC (nic=vnic)
 	  -i, --iflist       shared interface list
 	                     if1=addr1;route,if2=addr2;route,...,ifn=addrn;route
 	                     route is optional
@@ -1175,7 +1175,10 @@ then
 		vnic=${VNIC#*=}
 		pnic=${VNIC%=*}
 
-		print -n "  creating VNIC '$vnic' on '$pnic': "
+        [[ -z $vnic || -z $pnic || $vnic == $pnic ]] \
+            && die "incorrect VNIC specification"
+
+		print -n "  creating VNIC '$vnic' on link '$pnic': "
 
 		if dladm help 2>&1 | egrep -s "create-vnic"
 		then
