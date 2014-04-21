@@ -6,7 +6,7 @@
 # ---------
 #
 # A script to help create, destroy, recreate, and manage zones Solaris
-# servers. Usage is fairly complicated. Run with -h to get options.
+# servers. Usage is fairly complicated. The help command will help you.
 #
 # This script was originally written in the days before ZFS root, when it
 # was wise to put zone roots on UFS. To get some ZFS benefit, the script
@@ -20,27 +20,29 @@
 #
 # R Fisher 11/09
 #
-# v2.0  Initial release. RDF 30/09/2009
+# v2.0   Initial public release. RDF 30/09/2009
 #
-# v2.1  Better handling of /zonedata type zones. Support branded zones, lx
-#       is tested on x86 b130 only for the Centos image on Sun's website.
-#       SUNWsolaris8 is tested on SPARC 5.10 for the Solaris 8 container
-#       image Sun supply. SUNWsolaris9 has been tested with a minimal
-#       SPARC Solaris 9 build. Works on OpenSolaris 2009.03. Added new
-#       "clone" command for simple zone cloning.
+# v2.1   Better handling of /zonedata type zones. Support branded zones,
+#        lx is tested on x86 b130 only for the Centos image on Sun's
+#        website.  SUNWsolaris8 is tested on SPARC 5.10 for the Solaris 8
+#        container image Sun supply. SUNWsolaris9 has been tested with a
+#        minimal SPARC Solaris 9 build. Works on OpenSolaris 2009.03.
+#        Added new "clone" command for simple zone cloning.
 #
-# v3.0	Code tidy. Readied for public consumption. Much improvement of
-#       cloning. Works properly on S10/SXCE/S11 Express. New "all" and
-#       "list" commands.
+# v3.0	 Code tidy. Readied for public consumption. Much improvement of
+#        cloning. Works properly on S10/SXCE/S11 Express. New "all" and
+#        "list" commands.
 #
-# v3.1  -a option to create anet networked zones on Solaris 11
+# v3.1   -a option to create anet networked zones on Solaris 11
+#
+# v3.1.1 Understands more software. Minor bugfixes. New "help" system.
 #
 #=============================================================================
 
 #-----------------------------------------------------------------------------
 # VARIABLES
 
-MY_VER="3.1"
+MY_VER="3.1.1"
 	# Version of script. KEEP UPDATED!
 
 PATH=/usr/bin:/usr/sbin
@@ -155,31 +157,28 @@ function die
 
 usage()
 {
-	# print usage
+	cat <<-EOH
+	usage: ${0##*/} <command> [options]
 
-	cat <<-EOUSAGE
+	commands are:
+	create, recreate, clone remove, all, list, version, help
 
-	Create, destroy, clone and recreate Solaris zones.
+	'${0##*/} help <command>' for more information.
+	EOH
+    exit 2
+}
 
-	usage:
+usage_further()
+{
+    case $1 in
+
+        create)
+            cat<<-EOH
 	  ${0##*/} create <-i|-e|-a addr> [-F fslist] [-c class] [-wFp] <zone>
 
 	  ${0##*/} create <-b brand> <-I image> [-t type] <-i|-e addr>
 	            [-v nic=vnic] [-Ffslist] [-c class] [-Fp] <zone>
 
-	  ${0##*/} recreate [-wsF] [ -d directory] <zone>
-
-	  ${0##*/} clone [-Ff] <-i|-e addr> -s<zone> <zone>
-
-	  ${0##*/} remove|destroy [-f] [-k|z] <zone> zone ... zone
-
-	  ${0##*/} all <halt|reboot|shutdown|boot|run>
-
-	  ${0##*/} list <classes|files>
-
-	  ${0##*/} -V
-
-	CREATE MODE:
 	  -w, --whole        create a whole-root zone
 	  -v, --vnic         create VNIC on physical NIC (nic=vnic)
 	  -i, --iflist       shared interface list
@@ -215,21 +214,25 @@ done)
 	  -I, --image        full path to install image for branded zones
 	  -t, --type         for lx branded zones, the type of install. One
 	                     of "server", "desktop", "developer" or "all"
+			EOH
+			;;
 
-	CLONE MODE:
-	  -F, --force        force removal of existing zone
-	  -f, --fs           create new /zonedata filesystems for target zone
-	  -i, --iflist       shared interface list
-	  -e, --exclusive    exclusive interface list
-	  -s, --source       source zone
+         recreate)
+			cat<<-EOH
 
-	RECREATE MODE:
+	  ${0##*/} recreate [-wsF] [ -d directory] <zone>
+
 	  -d, --dir          directory in which to find DR information
 	  -F, --force        if zone exists, remove it and re-create
 	  -s, --sparse       Recreate zone as sparse-root
 	  -w, --whole        Recreate zone as whole-root
+			EOH
+			;;
 
-	REMOVE MODE:
+         destroy)
+			cat<<-EOH
+	  ${0##*/} remove|destroy [-f] [-k|z] <zone> zone ... zone
+
 	  -F, --force        force removal of zones (non-interactive)
 	  -a, --all          remove the zone's root, if on ZFS, AND
 	                     additional ZFS filesystems. By default, these
@@ -239,21 +242,33 @@ done)
 	                     files which are not removed by the 'zoneadm
 	                     uninstall' command
 	                     (cannot be used in conjunction with -a)
+			EOH
+            ;;
 
-	  -h, --help         display this message
-	  -V, --version      print version number and exit
+         clone)
+			cat <<-EOH
+	  ${0##*/} clone [-Ff] <-i|-e addr> -s<zone> <zone>
 
-	EXAMPLES
+	  -F, --force        force removal of existing zone
+	  -f, --fs           create new /zonedata filesystems for target zone
+	  -i, --iflist       shared interface list
+	  -e, --exclusive    exclusive interface list
+	  -s, --source       source zone
+			EOH
+			;;
 
-	  s-zone.sh create -i bge0=10.10.7.24,bge1=10.10.10.124 -p newzone
+        all)
+	        print "${0##*/} all <halt|reboot|shutdown|boot|run>"
+            ;;
 
-	  s-zone.sh clone -iatge0=192.168.1.24 -s gold-zone newzone
+        list)
+	        print "${0##*/} list <classes|files>"
+            ;;
 
-	  s-zone.sh recreate -s oldzone
+        *)	usage
+            ;;
 
-	  s-zone.sh remove -Fa oldzone badzone brokenzone
-
-	EOUSAGE
+    esac
 	exit 2
 }
 
@@ -310,7 +325,7 @@ function check_ip_addr
 
 	print $1 | tr . "\n" | while read oct
 	do
-		[[ $oct -lt 0 || $oct -gt 255 ]] && ret=1
+		(( $oct < 0 || $oct > 255 )) && ret=1
 	done 2>/dev/null
 
 	[[ -n $ret ]] && print "    $1 is not a valid ethernet address."
@@ -389,7 +404,7 @@ function remove_zone
 		if [[ $zstate == "installed" || $zstate == "incomplete" ]]
 		then
 			print -n "  uninstalling: "
-			zoneadm -z $1 uninstall -F 2>/dev/null \
+			zoneadm -z $1 uninstall -F >/dev/null 2>&1 \
 				&& print "ok" || die "failed"
 		fi
 
@@ -428,8 +443,7 @@ function zone_boot
     print "#----zone_boot()" >>$ERRLOG
 
 	zoneadm -z $1 boot >>$ERRLOG 2>&1\
-		&& print "  boot process begun" \
-        || die "boot failed"
+		&& print "  boot process begun" || die "boot failed"
 
 }
 
@@ -872,10 +886,9 @@ function get_s11_network_data
 #-----------------------------------------------------------------------------
 # SCRIPT STARTS HERE
 
-# If we've been asked to print the version, do that right now and quit. I'm
-# not using getopts for now
+# If we've been asked to print the version, do that right now and quit
 
-if [[ $1 == "-V" || $1 == "--version" ]]
+if [[ $1 == "-V" || $1 == "--version" || $1 == "version" ]]
 then
 	print $MY_VER
 	exit 0
@@ -885,32 +898,36 @@ fi
 
 [[ $(uname -v) == 11* ]] && S11=true
 
-# We should have at least two args. If not, print usage info
-
-(( $# < 2 )) && usage
-
 # Store the script's arguments and options
 
 INV_CMD="$0 $*"
 
 # Basic checks before we do anything. We need to be root, in the global zone
-# of a system which knows about zones
+# of a system which knows about zones, unless it's help or something.
 
-whence zoneadm >/dev/null || die "This system does not support zones."
+if [[ $1 != "list" && $1 != "help" ]]
+then
+	whence zoneadm >/dev/null || die "This system does not support zones."
 
-id | egrep -s "uid=0" || [[ $1 == "list" ]] \
-	|| die "script can only be run by root."
+	id | egrep -s "uid=0" || die "script can only be run by root."
 
-[[ $(zonename) != "global" && $1 != "list" ]] \
-	&& die "This script can only be run from the global zone."
+	[[ $(zonename) == "global" ]] \
+		|| die "This script can only be run from the global zone."
+fi
+
+(( $# == 0 )) && usage
 
 # Get the mode keyword (the first argument), then chop it off the arglist
 
 MODE=$1
 shift $(( $OPTIND ))
 
-# The rest of the script is divided into three blocks. One each for
-# creation, removal, and recreation of zones. They're in if/elif blocks
+# All commands need an argument.
+
+(( $# < 1 )) && usage_further $MODE
+
+# The rest of the script is divided into blocks. One each for
+# each command keyword.
 
 #-- ZONE CREATION ------------------------------------------------------------
 
@@ -967,7 +984,7 @@ then
 			w)	CREATE_FLAGS="-b"
 				;;
 
-			*)	usage
+			*)	usage_further $MODE
 				;;
 		esac
 
@@ -1524,7 +1541,7 @@ then
 			p)	PRINT_ONLY=true
 				;;
 
-			*)	usage
+			*)	usage_further $MODE
 				;;
 		esac
 
@@ -1660,7 +1677,7 @@ then
 			s)	SRC_ZONE=$OPTARG
 				;;
 
-			*)	usage
+			*)	usage_further $MODE
 
 		esac
 
@@ -1670,7 +1687,7 @@ then
 
 	# We need a single argument
 
-	[[ $# == 1 ]] || usage
+	[[ $# == 1 ]] || usage_further $MODE
 
 	ZNAME=$1
 
@@ -1837,7 +1854,7 @@ then
 			w)	ZTYPE="whole"
 				;;
 
-			*)	usage
+			*)	usage_further $MODE
 
 		esac
 
@@ -1847,7 +1864,7 @@ then
 
 	# We need a single argument
 
-	[[ $# == 1 ]] || usage
+	[[ $# == 1 ]] || usage_further $MODE
 
 	ZNAME=$1
 
@@ -2123,11 +2140,12 @@ then
 
 		EODEF
 	else
-		usage
+		usage_further $MODE
 	fi
-else
 
-	# I don't know what we're supposed to be doing. Show usage.
-
+elif [[ x$MODE == xhelp ]]
+then
+	usage_further $1
+else # I don't know what we're supposed to be doing.
 	usage
 fi

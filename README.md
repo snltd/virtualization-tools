@@ -5,14 +5,17 @@ Scripts to help with administration of a virtualized Solaris setup.
 ## s-zone.sh
 
 This script creates, clones and destroys zones. It was written to work
-with Solaris 10, but you can use it with most other SunOS systems which
-handle zones.
+with Solaris 10, but it will work on most other SunOS systems which
+handle zones. I use it on a mix of Solaris 10, Solaris 11 and OmniOS. I
+don't think it would work on SmartOS, but they already have [something
+better](https://github.com/joyent/smartos-live/blob/master/src/vm/man/vmadm.1m.md).
 
 It's grown and grown, on the hoof, from being a small script used to
-make simple zones, and it shows. The code is absolutely horrible, and no
-kind of example to anyone on how to write any kind of program. But, it's
-served me very well in a number of production environments, so here it
-is.
+make simple zones, and it shows. I've added in what I needed, when I
+needed it, usually in the quickest way that got the job done. The code
+is absolutely horrible, and no kind of example to anyone on how to write
+any kind of program. But, it's served me very well in a number of
+production environments, since 2007.
 
 [Documentation is
 in the wiki](https://github.com/snltd/admin-scripts/wiki/s-zone.sh).
