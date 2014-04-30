@@ -1008,7 +1008,7 @@ then
 	dispadmin -d 2>/dev/null | egrep -s FSS \
 		|| print "WARNING: set default scheduler to FSS"
 
-    [[ -n $AIFLIST && ! $S11 ]] \
+    [[ -n $AIFLIST && -z $S11 ]] \
         && die "automatic interfaces are only supported in Solaris 11"
 
 	# Either exclusive, shared, or automatic interfaces - not more than
