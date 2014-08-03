@@ -1657,7 +1657,7 @@ then
 		|| die "This system does not support zone cloning."
 
 	while getopts \
-		"f(fs)F(force)e:i:(iflist)s:(source)" option 2>/dev/null
+		"f:(fs)F(force)e:i:(iflist)s:(source)" option 2>/dev/null
 	do
 
 		case $option in
